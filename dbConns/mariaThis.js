@@ -4,16 +4,20 @@ const mariadb = require('mariadb');
 const pool = mariadb.createPool({
   host: process.env.THISDB_HOST,
   port: process.env.THISDB_PORT,
+  database: process.env.THISDB_NAME,
   user: process.env.THISDB_USER,
   password: process.env.THISDB_PW,
   connectionLimit: 5
 });
 
 // DB Connection 객체 생성 함수
-async function getConn(dbName = process.env.THISDB_NAME) {
-  const conn = await pool.getConnection();
-  conn.query('USE ' + dbName);
-  return conn;
+async function getConn() { // try ~ catch가 안 먹힘
+  try {
+    const conn = await pool.getConnection();
+    return conn;
+  } catch (err) {
+    console.error(`\n<↓↓↓↓↓ DB connection error ↓↓↓↓↓>\n\n`, err)
+  }
 }
 
 // Query 전송
@@ -24,11 +28,14 @@ async function sendQry(str) {
     const rows = await conn.query(str);
     return rows;
   } catch (err) {
-    console.log(err)
+    console.error(`\n<↓↓↓↓↓ Error executing the query ↓↓↓↓↓>\n\n"${str}". `, err)
   } finally {
-    conn.release();
-    conn.end()
+    if (conn) {
+      conn.release();
+      conn.end()
+    }
   }
 };
+
 
 module.exports = { sendQry }
