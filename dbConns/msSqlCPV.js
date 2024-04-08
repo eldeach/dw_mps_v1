@@ -32,24 +32,16 @@ const pool = new sql.ConnectionPool({
   },
 })
 
-// DB Connection 객체 생성 함수
-async function getConn() { // try ~ catch가 안 먹힘
-  try {
-    const conn = await pool.connect();
-    return conn;
-  } catch (err) {
-    console.error(`\n<↓↓↓↓↓ DB connection error ↓↓↓↓↓>\n\n`, err)
-  }
-}
+
 // Query 전송
 async function sendQry(str) {
   let conn;
   try {
-    conn = await getConn();
+    conn = await pool.connect();
     const rows = await conn.query(str);
     return rows.recordset;
   } catch (err) {
-    console.error(`\n<↓↓↓↓↓ Error executing the query ↓↓↓↓↓>\n\n"${str}". `, err)
+    console.error(`\n<↓↓↓↓↓ Error occur ↓↓↓↓↓>\n\n"${str}". `, err)
   } finally {
     if (conn) {
       conn.close();
@@ -58,4 +50,23 @@ async function sendQry(str) {
 };
 
 
-module.exports = { sendQry }
+// Procedure 실행
+async function sendReq(prm) {
+  let sqlReq;
+  let rs;
+  try {
+    sqlReq = (await pool.connect()).request();
+    prm.p.map((value, key) => {
+      sqlReq.input(`${value.name}`, `${value.value}`)
+    })
+    prm.o.map((value, key) => {
+      sqlReq.output(`${value.name}`)
+    })
+    rs = (await sqlReq.execute(prm.procedure)).output
+  } catch (err) {
+    console.error(`\n<↓↓↓↓↓ Error occur ↓↓↓↓↓>\n\n. `, err)
+  }
+  return rs
+}
+
+module.exports = { sendQry, sendReq }

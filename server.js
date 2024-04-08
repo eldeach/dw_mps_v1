@@ -59,6 +59,7 @@ app.use("/", express.static("public"));
 //   console.log('listening on '+ 8080)
 // })
 
+const request = require('./dbConns/msSqlCPV').request;
 // https 의존성으로 certificate와 private key로 새로운 서버를 시작
 https.createServer(options, app).listen(process.env.PORT, async () => {
   console.log('HTTPS server started on port ' + process.env.PORT)
@@ -68,9 +69,11 @@ https.createServer(options, app).listen(process.env.PORT, async () => {
 // ======================================================================================== [Import Component] js
 // Function
 const { ppLocal, ppLocalLogout, ppLocalSessionCheck } = require('./auth/passportLocal')
-ppLocal (app)
-ppLocalLogout (app)
-ppLocalSessionCheck (app)
+ppLocal(app)
+ppLocalLogout(app)
+ppLocalSessionCheck(app)
+
+
 
 
 //================================================================================ [공통 기능] 모든 route를 react SPA로 연결 (이 코드는 맨 아래 있어야함)
