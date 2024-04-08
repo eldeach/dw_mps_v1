@@ -95,7 +95,6 @@ async function ppLocal(app) {
 
   passport.serializeUser(function (userID, done) {
     return done(null, userID)
-
   });
 
   passport.deserializeUser(function (userID, done) {
