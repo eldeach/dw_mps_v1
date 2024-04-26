@@ -6,10 +6,6 @@ const LocalStrategy = require('passport-local').Strategy; // passport 로컬 인
 //session
 const session = require('express-session'); // 세션 라이브러리
 
-//bcrypt
-// const bcrypt = require('bcrypt'); // bcrypt 라이브러리 
-// const saltRounds = 12;
-
 //crypt
 const crypto = require('crypto');
 const salt = 10; //crypto.randomBytes(128).toString('base64');
@@ -20,26 +16,28 @@ const moment = require("moment");
 
 
 // ======================================================================================== [Import Component] js
-const sendReq = require('../dbConns/msSqlCPV').sendReq;
+const sendReq = require('../Dbc/dbcMsSqlCPV').sendReq;
 
-async function sesstionTimeGet() {
+async function sesstionEnv() {
   let sesstimePrm = {
-    p: [],
-    o: [
+    pInput: [],
+    pOutput: [
       {
         name: 'P_SESSTIME'
       },
+      {
+        name: 'P_SESSSECRET'
+      },
     ],
-    procedure: 'DWS_CPV_SEL_LOGIN_SESSIONTIME'
+    procedure: 'DWS_CPV_SEL_LOGIN_SESSIONENV'
   }
-
-  return parseInt((await sendReq(sesstimePrm)).P_SESSTIME)
+  return (await sendReq(sesstimePrm)).output
 }
 
 async function ppLocal(app) {
   app.use(session({
     name: 'cpv.connect.sid',
-    secret: process.env.passport_secret_code,
+    secret: 'secret',
     resave: false,
     saveUninitialized: false,
     cookie: {
@@ -51,20 +49,15 @@ async function ppLocal(app) {
   app.use(passport.initialize());
   app.use(passport.session());
 
-  app.post('/local-login',
-    passport.authenticate('local', { successRedirect: "/local-login-success", failureRedirect: '/local-login-fail', failureFlash: true }));
-
-
-
   passport.use(new LocalStrategy({
-    usernameField: 'user_account', // form에서 전달받은 값 중 username으로 사용할 html div의 id 값
-    passwordField: 'user_pw', // form에서 전달받은 값 중 password로 사용할 html div의 id 값
+    usernameField: 'USER_ID', // form에서 전달받은 값 중 username으로 사용할 html div의 id 값
+    passwordField: 'PWD', // form에서 전달받은 값 중 password로 사용할 html div의 id 값
     session: true, // 세션 사용 여부 : true
     passReqToCallback: true, // true 일경우 다음 콜백함수에서 req 인자를 첫번째로 주고 클라이언트가 전송한 req객체를 사용할 수 있음
     // 사용하지 않는다면 false로 하고 다음 콜백함수에서 req 인자를 제거해서 총 3개의 인자만 전달해야함
   }, async function (req, userID, userPW, done) { // 첫번째 인자는 위에서 지정한 usernameField 값, 두번째 인자는 passwordField 값, passReqToCallback : true이면 맨 앞에 req 객체를 받을 수 있음
     let loginPrm = {
-      p: [
+      pInput: [
         {
           name: 'P_USER_ID',
           value: `${userID}`
@@ -75,10 +68,10 @@ async function ppLocal(app) {
         },
         {
           name: 'PLANT_CD',
-          value: `${req.body.plant_cd}`
+          value: `${req.body.PLANT_CD}`
         },
       ],
-      o: [
+      pOutput: [
         {
           name: 'P_RESULT'
         },
@@ -86,10 +79,10 @@ async function ppLocal(app) {
       procedure: 'DWS_CPV_SEL_LOGIN_FINDUSER'
     }
 
-    if ((await sendReq(loginPrm)).P_RESULT == '1') {
+    if ((await sendReq(loginPrm)).output.P_RESULT == '1') {
       return done(null, userID)
     } else {
-      return done(null, false, { message: "F_LOGIN_09" })
+      return done(null, false, { message: "LOGIN_09" })
     }
   }));
 
@@ -101,22 +94,28 @@ async function ppLocal(app) {
     done(null, userID)
   });
 
+  // API URL
+
+  app.post('/local-login', passport.authenticate('local', { successRedirect: "/local-login-success", failureRedirect: '/local-login-fail', failureFlash: true }));
+
   app.get('/local-login-success', async function (req, res) {
-    let expireTimeSec = await sesstionTimeGet()
-    req.session.cookie.maxAge = expireTimeSec * 1000
-    res.status(200).json({ msg : 'F_LOGIN_07', extraData : {expireDateTime:  moment(new Date).add(expireTimeSec, 's')}})
+    // let expireTimeSec = await sesstionTimeGet()
+    // let sessSecret = await sesstionSecretGet()
+    let sessEnv = await sesstionEnv()
+    req.session.secret = sessEnv.P_SESSSECRET
+    req.session.cookie.maxAge = parseInt(sessEnv.P_SESSTIME) * 1000
+    res.status(200).json({ msg: 'LOGIN_07', extraData: { expireDateTime: moment(new Date).add(parseInt(sessEnv.P_SESSTIME), 's') } })
   })
 
   app.get('/local-login-fail', function (req, res) {
-    res.status(200).json({ msg : req.session.flash.error.slice(-1)[0]})
+    res.status(200).json({ msg: req.session.flash.error.slice(-1)[0] })
   })
 }
-
 
 function ppLocalLogout(app) {
   app.get('/local-logout', function (req, res) {
     req.session.destroy(async () => {
-      res.status(200).json({msg : 'F_LOGIN_14'})
+      res.status(200).json({ msg: 'LOGIN_14' })
     });
   })
 }
@@ -124,11 +123,12 @@ function ppLocalLogout(app) {
 function ppLocalSessionCheck(app) {
   app.get('/sessioncheck', async function (req, res) {
     if (req.user) {
-      let expireTimeSec = await sesstionTimeGet()
-      req.session.cookie.maxAge = expireTimeSec * 1000
-      res.status(200).json({ msg : 'F_LOGIN_13', extraData : {expireDateTime:  moment(new Date).add(expireTimeSec, 's')}})
+      let sessEnv = await sesstionEnv()
+      req.session.secret = sessEnv.P_SESSSECRET
+      req.session.cookie.maxAge = parseInt(sessEnv.P_SESSTIME) * 1000
+      res.status(200).json({ msg: 'LOGIN_13', extraData: { expireDateTime: moment(new Date).add(parseInt(sessEnv.P_SESSTIME), 's') } })
     } else {
-      res.status(200).json({ msg : 'F_LOGIN_11'})
+      res.status(200).json({ msg: 'LOGIN_11' })
     }
   })
 }
