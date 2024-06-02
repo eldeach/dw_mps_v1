@@ -64,6 +64,9 @@ authPermissionCheck(app)
 const { envClient } = require('./Env/envClient')
 envClient(app)
 
+const { mcsdata } = require('./MCSDATA/mcsdata')
+mcsdata(app)
+
 const { rdData } = require('./Rd/rdData')
 rdData(app)
 

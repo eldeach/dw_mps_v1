@@ -53,7 +53,7 @@ async function sendReq(prm) {
     })
     rs = (await sqlReq.execute(prm.procedure))
   } catch (err) {
-    console.error(`\n<↓↓↓↓↓ Error occur ↓↓↓↓↓>\n\n. `, err)
+    return err
   } finally {
     if (conn) {
       conn.close();
