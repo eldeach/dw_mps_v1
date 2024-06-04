@@ -35,7 +35,6 @@ function mcsdata(app) {
             }
         } else {
             let rserr = {
-
                 output: {
                     P_RESULT: "ERROR",
                     P_VALUE: {
