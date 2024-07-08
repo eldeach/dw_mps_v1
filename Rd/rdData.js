@@ -33,7 +33,6 @@ async function runExec(plantCd, EqptId, TagId, dateFrom, dateTo) {
 
 function rdData(app) {
     app.get('/cpvdata', async function (req, res) {
-        console.log(req.body)
         let rs = await runExec('1230', 'A-ROC001', '/ASSETS/A_Process/A-ROC001_TQ002.PV', '2024-04-01 00:00:00', '2024-04-30 00:00:00')
         res.status(200).json(rs.recordset)
     })

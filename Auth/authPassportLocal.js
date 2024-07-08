@@ -18,7 +18,7 @@ const moment = require("moment");
 // ======================================================================================== [Import Component] js
 const sendReq = require('../Dbc/dbcMsSqlCPV').sendReq;
 
-async function sesstionEnv() {
+async function getSessionEnv() {
   let sesstimePrm = {
     pInput: [],
     pOutput: [
@@ -31,7 +31,8 @@ async function sesstionEnv() {
     ],
     procedure: 'DWS_CPV_SEL_LOGIN_SESSIONENV'
   }
-  return (await sendReq(sesstimePrm)).output
+  let rsPl = await sendReq(sesstimePrm);
+  return rsPl.output
 }
 
 async function ppLocal(app) {
@@ -79,7 +80,10 @@ async function ppLocal(app) {
       procedure: 'DWS_CPV_SEL_LOGIN_FINDUSER'
     }
 
-    if ((await sendReq(loginPrm)).output.P_RESULT == '1') {
+    let rsPL = await sendReq(loginPrm);
+    let rsMatch = rsPL.output.P_RESULT;
+
+    if (rsMatch == '1') {
       return done(null, userID)
     } else {
       return done(null, false, { message: "LOGIN_09" })
@@ -99,12 +103,13 @@ async function ppLocal(app) {
   app.post('/local-login', passport.authenticate('local', { successRedirect: "/local-login-success", failureRedirect: '/local-login-fail', failureFlash: true }));
 
   app.get('/local-login-success', async function (req, res) {
-    // let expireTimeSec = await sesstionTimeGet()
-    // let sessSecret = await sesstionSecretGet()
-    let sessEnv = await sesstionEnv()
+    let sessEnv = await getSessionEnv()
     req.session.secret = sessEnv.P_SESSSECRET
     req.session.cookie.maxAge = parseInt(sessEnv.P_SESSTIME) * 1000
-    res.status(200).json({ msg: 'LOGIN_07', extraData: { expireDateTime: moment(new Date).add(parseInt(sessEnv.P_SESSTIME), 's') } })
+    res.status(200).json({ msg: 'LOGIN_07', extraData: {
+      expireDateTime: moment(new Date).add(parseInt(sessEnv.P_SESSTIME), 's'),
+      lang: req.session.lang // Include lang in the response
+    } })
   })
 
   app.get('/local-login-fail', function (req, res) {
@@ -122,8 +127,9 @@ function ppLocalLogout(app) {
 
 function ppLocalSessionCheck(app) {
   app.get('/sessioncheck', async function (req, res) {
+    console.log(req.session.cookie.maxAge)
     if (req.user) {
-      let sessEnv = await sesstionEnv()
+      let sessEnv = await getSessionEnv()
       req.session.secret = sessEnv.P_SESSSECRET
       req.session.cookie.maxAge = parseInt(sessEnv.P_SESSTIME) * 1000
       res.status(200).json({ msg: 'LOGIN_13', extraData: { expireDateTime: moment(new Date).add(parseInt(sessEnv.P_SESSTIME), 's') } })
