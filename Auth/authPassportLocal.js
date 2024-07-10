@@ -99,17 +99,18 @@ async function ppLocal(app) {
   });
 
   // API URL
-
   app.post('/local-login', passport.authenticate('local', { successRedirect: "/local-login-success", failureRedirect: '/local-login-fail', failureFlash: true }));
 
   app.get('/local-login-success', async function (req, res) {
     let sessEnv = await getSessionEnv()
     req.session.secret = sessEnv.P_SESSSECRET
     req.session.cookie.maxAge = parseInt(sessEnv.P_SESSTIME) * 1000
-    res.status(200).json({ msg: 'LOGIN_07', extraData: {
-      expireDateTime: moment(new Date).add(parseInt(sessEnv.P_SESSTIME), 's'),
-      lang: req.session.lang // Include lang in the response
-    } })
+    res.status(200).json({
+      msg: 'LOGIN_07', extraData: {
+        expires: moment(new Date).add(parseInt(sessEnv.P_SESSTIME), 's'),
+        alertTiming: 30
+      }
+    })
   })
 
   app.get('/local-login-fail', function (req, res) {
@@ -132,7 +133,12 @@ function ppLocalSessionCheck(app) {
       let sessEnv = await getSessionEnv()
       req.session.secret = sessEnv.P_SESSSECRET
       req.session.cookie.maxAge = parseInt(sessEnv.P_SESSTIME) * 1000
-      res.status(200).json({ msg: 'LOGIN_13', extraData: { expireDateTime: moment(new Date).add(parseInt(sessEnv.P_SESSTIME), 's') } })
+      res.status(200).json({
+        msg: 'LOGIN_13', extraData: {
+          expires: moment(new Date).add(parseInt(sessEnv.P_SESSTIME), 's'),
+          alertTiming: 30
+        }
+      })
     } else {
       res.status(200).json({ msg: 'LOGIN_11' })
     }

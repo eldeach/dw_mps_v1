@@ -60,14 +60,16 @@ ppLocalSessionCheck(app)
 
 const { authPermissionCheck } = require('./Auth/authPermissionCheck')
 authPermissionCheck(app)
+const { authUserMenu } = require('./Auth/authUserMenu')
+authUserMenu(app)
 
 const { envClient } = require('./Env/envClient')
 envClient(app)
 const { envClientLang } = require('./Env/envClientLang')
 envClientLang(app)
 
-const { mcsdata } = require('./MCSDATA/mcsdata')
-mcsdata(app)
+const { trendData } = require('./TrendData/trendData')
+trendData(app)
 
 const { rdData } = require('./Rd/rdData')
 rdData(app)

@@ -22,13 +22,46 @@ async function selMcsdataTaglist(plantCd) {
     return (await sendReq(prm))
 }
 
-function mcsdata(app) {
+async function selMcsdata(PLANT_CD, EQPTID, TAGID, FROM, TO) {
+    let prm = {
+        pInput: [
+            {
+                name: 'P_PLANT_CD',
+                value: `${PLANT_CD}`
+            },
+            {
+                name: 'P_EQPTID',
+                value: `${EQPTID}`
+            },
+            {
+                name: 'P_TAGID',
+                value: `${TAGID}`
+            },
+            {
+                name: 'P_FROM',
+                value: `${FROM}`
+            },
+            {
+                name: 'P_TO',
+                value: `${TO}`
+            },
+        ],
+        pOutput: [
+
+        ],
+        procedure: 'DWS_CPV_SEL_MCSDATA_HI_TAG_FROM_TO_AVG_FOR_BATCH'
+    }
+    return (await sendReq(prm))
+}
+
+function trendData(app) {
     //SELECT
-    app.get('/reqmcsdatataglist', async function (req, res) {
+    app.get('/trenddatataglist', async function (req, res) {
         let rs = await selMcsdataTaglist(req.query.PLANT_CD)
 
         if (!(rs.name == "RequestError")) {
             if (rs.output.P_RESULT == "SUCCESS") {
+                console.log(rs.recordsets)
                 res.status(200).json(rs)
             } else if (rs.output.P_RESULT == "ERROR") {
                 res.status(200).json(rs)
@@ -50,9 +83,30 @@ function mcsdata(app) {
             res.status(200).json(rserr)
         }
     })
+
+    app.get('/trenddata', async function (req, res) {
+        console.log(req.query)
+        if(req.user){
+            let PLANT_CD = req.query.PLANT_CD
+            let EQPTID = req.query.EQPTID
+            let TAGID = req.query.TAGID
+            let FROM = req.query.FROM
+            let TO = req.query.TO
+            let rs = await selMcsdata(PLANT_CD, EQPTID, TAGID, FROM, TO)
+            if(!rs.recordsets){
+                res.status(200).json([])
+            } else {
+                res.status(200).json(rs.recordsets[0])
+            }
+        } else {
+            res.status(200).json([])
+        }
+
+
+    })
 }
 
-module.exports = { mcsdata }
+module.exports = { trendData }
 
 
 
